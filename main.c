@@ -3,6 +3,7 @@
 #include <termios.h> // library for terminal
 #include <ctype.h>
 
+
 void setRawMode(){
 
     // also CTRL-S and CTRL-Q functionalities disabled - using IXOFF and IXON from termios.h
@@ -15,10 +16,15 @@ void setRawMode(){
 
     int tcget = tcgetattr(STDIN_FILENO, &termios_struct); // tcgetattr - get the parameters associated with the terminal
 
-    termios_struct.c_lflag = not_echo_bit_flag & tcget;
-    termios_struct.c_iflag = ~(ixoff_ixon);
+    termios_struct.c_lflag &= not_echo_bit_flag;
+    termios_struct.c_iflag &= ~(ixoff_ixon);
 
-    termios_struct.c_oflag = ~(OPOST);
+    termios_struct.c_oflag &= ~(OPOST);
+
+    // termios_struct.c_lflag &= ~(ECHO | ICANON | ISIG); // disable echo, canonical mode, signals
+    // termios_struct.c_iflag &= ~(IXON | ICRNL);         // disable Ctrl-S/Q and CR-to-NL mapping
+    // termios_struct.c_oflag &= ~(OPOST);                // disable output processing
+
 
 
     //now we will set the terminal in raw mode by passing new params to it
@@ -33,12 +39,13 @@ void setCanonicalMode(){
     struct termios termios_struct;
     int echo_bit_flag = ECHO;
     int tcget = tcgetattr(STDIN_FILENO, &termios_struct); // tcgetattr - get the parameters associated with the terminal
-    termios_struct.c_lflag = echo_bit_flag;
+
+    termios_struct.c_lflag = termios_struct.c_lflag | echo_bit_flag;
 
     int ixoff_ixon = (IXOFF | IXON);
-    termios_struct.c_iflag = (ixoff_ixon);
+    termios_struct.c_iflag = termios_struct.c_iflag | (ixoff_ixon);
     
-    termios_struct.c_oflag = (OPOST);
+    termios_struct.c_oflag = termios_struct.c_oflag | (OPOST);
 
     tcsetattr(STDIN_FILENO, TCSANOW, &termios_struct);
 
@@ -55,9 +62,9 @@ int main(void){
         if (iscntrl(c))
             printf("%d\n", c);
         else
-            printf("%d ('%c')\n", c, c);
+            printf("%d ('%c')\r\n", c, c);
 
-  }
+    }
 
 
     setCanonicalMode();
